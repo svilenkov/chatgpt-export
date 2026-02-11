@@ -1,0 +1,15 @@
+# Data / exports
+*.json
+*.txt
+!README.txt
+
+# Generated dirs
+chunks/
+convo_chunks/
+files/
+
+# Local config
+.env
+
+# OS
+.DS_Store
