@@ -1,6 +1,8 @@
 # chatgpt-export
 
-CLI tools to search, filter, and extract ChatGPT conversation exports received via email after clicking on "Settings > Data Controls > Export Data"
+CLI tools to search, filter, extract, query, and token-count ChatGPT conversation exports received via email after clicking on "Settings > Data Controls > Export Data"
+
+Supports both old (single `conversations.json`) and new (split `conversations-000.json` .. `conversations-NNN.json`) export formats.
 
 ## Setup
 ```bash
@@ -12,9 +14,14 @@ cp .env.example .env
 ```bash
 ./count.sh              # List all conversations
 ./search.sh "keyword"   # Search by title
+./search.sh -c "keyword"  # Search inside message content
 ./filter.sh "Title"     # Extract convo to convo.json
 ./extract.sh            # Dump messages to convo_lines.txt
 ./cp-files.sh           # Copy attachments
+./show.sh "keyword"     # Search + view transcript in less
+./show.sh --id <uuid>   # View transcript by ID
+./query.sh "question"   # Pipe filtered convo to claude -p
+./tokens.sh <uuid>      # Estimate token count per conversation
 ```
 
 ### Filtering
@@ -41,6 +48,20 @@ extracted 'Allocate SKBs using PFMEMALLOC' to convo_lines.txt (499 lines, 5986 w
 ```
 
 ### Searching
+By title (fast):
+```bash
+./search.sh 'ed25519'
+```
+```ini
+ID                                    FROM        TO          MSGS  TITLE
+69a4b982-0108-8394-8d01-63e507fb91fb  2026-03-01  2026-03-02  336   ed25519 scheme
+```
+
+By message content (slower, scans all text):
+```bash
+./search.sh -c "Hadamard product"
+```
+
 Eg. sort results by message count
 
 ```bash
@@ -60,3 +81,37 @@ c9f3b5cd-c71a-4e03-992d-c1d26e2ca9bd  2024-04-10  2024-04-10  10    Heap-based S
 4f414a18-71f6-423f-86ea-f6ee32761d23  2024-01-28  2025-12-25  8     WiscKey: Separating Keys from Values in SSD-conscious Storage
 2a6108ca-a992-4747-98de-ce4c79de3de8  2024-01-27  2024-01-27  2     Decentralized Storage Network Restructure
 ```
+
+### Viewing
+Search and read a conversation directly:
+```bash
+./show.sh "RTEMS"
+./show.sh -c "extrusion"
+./show.sh --id 69a4b982-0108-8394-8d01-63e507fb91fb
+```
+
+### Querying with Claude
+Filter a conversation first, then ask Claude about it via `claude -p`:
+```bash
+./filter.sh "ed25519 scheme"
+./query.sh "summarize the key decisions made"
+./query.sh "extract all code snippets with filenames"
+```
+
+### Token counting
+Estimate how many tokens a conversation will use in context:
+```bash
+./tokens.sh 69a4b982-0108-8394-8d01-63e507fb91fb
+```
+```ini
+ID                                    TOKENS  TITLE
+69a4b982-0108-8394-8d01-63e507fb91fb  47956   ed25519 scheme
+(tokenizer: ttok)
+```
+
+Pipe from search:
+```bash
+./search.sh ed25519 | ./tokens.sh
+```
+
+Uses `ttok` if installed (`pip install ttok`), falls back to `tiktoken`, then to char estimate.
